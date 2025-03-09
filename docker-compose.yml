@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  authservice:
+    build:
+      context: ./AuthService
+      dockerfile: Dockerfile
+    ports:
+      - "5001:8080"
+    depends_on:
+      - db
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=usuarios_db;User Id=sa;Password=${DB_PASSWORD}
+    networks:
+      - app_network
+
+  userservice:
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+    ports:
+      - "5002:8080"
+    depends_on:
+      - db
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=publicaciones_db;User Id=sa;Password=${DB_PASSWORD}
+    networks:
+      - app_network
+
+  post_app:
+    build:
+      context: ./POST_APP
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - authservice
+      - userservice
+    environment:
+      - VITE_API_AUTH_URL=http://authservice:8080
+      - VITE_API_USER_URL=http://userservice:8080
+    networks:
+      - app_network
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql_server
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: ${DB_PASSWORD}
+      ACCEPT_EULA: "Y"
+    volumes:
+      - sql_data:/var/opt/mssql
+    networks:
+      - app_network
+
+networks:
+  app_network:
+
+volumes:
+  sql_data:
